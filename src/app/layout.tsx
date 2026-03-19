@@ -5,6 +5,9 @@ import { Providers } from '@/store/providers';
 export const metadata: Metadata = {
 	title: 'ClientHub CRM',
 	description: 'CRM Dashboard built with Next.js and TypeScript',
+	icons: {
+		icon: '/favicon.png',
+	},
 };
 
 export default function RootLayout({
