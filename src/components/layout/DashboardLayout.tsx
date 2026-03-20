@@ -7,12 +7,12 @@ type DashboardLayoutProps = {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
 	return (
-		<div className='flex min-h-screen bg-gray-50 text-gray-900'>
+		<div className='min-h-screen bg-gray-50 text-gray-900 lg:flex'>
 			<Sidebar />
 
-			<div className='flex flex-1 flex-col'>
+			<div className='flex min-h-screen flex-1 flex-col lg:ml-0'>
 				<Header />
-				<main className='flex-1 p-6'>{children}</main>
+				<main className='flex-1 p-4 sm:p-6'>{children}</main>
 			</div>
 		</div>
 	);

@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
+import uiReducer from './slices/uiSlice';
 import userReducer from './slices/userSlice';
 
 export const store = configureStore({
 	reducer: {
-		user: userReducer, // ✅ тепер є reducer
+		user: userReducer,
+		ui: uiReducer,
 	},
 });
 
