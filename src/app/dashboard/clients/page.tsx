@@ -1,5 +1,6 @@
 'use client';
 
+import { ClientsTable } from '@/features/clients/components/ClientsTable';
 import { useClients } from '@/features/clients/hooks/useClients';
 
 export default function ClientsPage() {
@@ -14,30 +15,25 @@ export default function ClientsPage() {
 	}
 
 	return (
-		<div>
-			<h2 className='mb-4 text-2xl font-bold'>Clients</h2>
+		<div className='space-y-6'>
+			<div>
+				<h2 className='text-2xl font-bold text-gray-900'>Clients</h2>
+				<p className='text-sm text-gray-600'>
+					Manage your client list and monitor their status.
+				</p>
+			</div>
 
-			<ul className='space-y-3'>
-				{data?.map((client) => (
-					<li
-						key={client.id}
-						className='rounded-lg border border-gray-200 bg-white p-4'
-					>
-						<div className='text-lg font-semibold'>
-							{client.fullName}
-						</div>
-						<div className='text-sm text-gray-600'>
-							{client.email}
-						</div>
-						<div className='text-sm text-gray-600'>
-							{client.company}
-						</div>
-						<div className='text-sm text-gray-600'>
-							{client.status}
-						</div>
-					</li>
-				))}
-			</ul>
+			{data && <ClientsTable clients={data} />}
 		</div>
 	);
 }
+
+// src/features/clients/
+//   types.ts
+//   hooks/
+//     useClients.ts
+//   services/
+//     clients.service.ts
+//   components/
+//     ClientStatusBadge.tsx
+//     ClientsTable.tsx
