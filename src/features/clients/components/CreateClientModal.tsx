@@ -1,13 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Client, ClientStatus } from '../types';
-
-type ClientFormValues = {
-	fullName: string;
-	email: string;
-	company: string;
-	status: ClientStatus;
-	source: string;
-};
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { clientSchema, ClientFormData } from '@/schemas/clientSchema';
+import { Client } from '../types';
 
 type Props = {
 	onClose: () => void;
@@ -15,22 +10,28 @@ type Props = {
 	initialData?: Client | null;
 };
 
-const defaultFormValues: ClientFormValues = {
-	fullName: '',
-	email: '',
-	company: '',
-	status: 'lead',
-	source: '',
-};
-
 export function CreateClientModal({ onClose, onSubmit, initialData }: Props) {
-	const [form, setForm] = useState<ClientFormValues>(defaultFormValues);
-
 	const isEditMode = Boolean(initialData);
+
+	const {
+		register,
+		handleSubmit,
+		reset,
+		formState: { errors },
+	} = useForm<ClientFormData>({
+		resolver: zodResolver(clientSchema),
+		defaultValues: {
+			fullName: '',
+			email: '',
+			company: '',
+			status: 'lead',
+			source: '',
+		},
+	});
 
 	useEffect(() => {
 		if (initialData) {
-			setForm({
+			reset({
 				fullName: initialData.fullName,
 				email: initialData.email,
 				company: initialData.company,
@@ -38,29 +39,24 @@ export function CreateClientModal({ onClose, onSubmit, initialData }: Props) {
 				source: initialData.source,
 			});
 		} else {
-			setForm(defaultFormValues);
+			reset({
+				fullName: '',
+				email: '',
+				company: '',
+				status: 'lead',
+				source: '',
+			});
 		}
-	}, [initialData]);
+	}, [initialData, reset]);
 
-	const handleChange = (
-		e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-	) => {
-		setForm((prev) => ({
-			...prev,
-			[e.target.name]: e.target.value,
-		}));
-	};
-
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-
+	const submitHandler = (formData: ClientFormData) => {
 		const client: Client = {
 			id: initialData?.id || Date.now().toString(),
-			fullName: form.fullName,
-			email: form.email,
-			company: form.company,
-			status: form.status,
-			source: form.source,
+			fullName: formData.fullName,
+			email: formData.email,
+			company: formData.company,
+			status: formData.status,
+			source: formData.source,
 			phone: initialData?.phone || '',
 			createdAt:
 				initialData?.createdAt ||
@@ -72,55 +68,89 @@ export function CreateClientModal({ onClose, onSubmit, initialData }: Props) {
 	};
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'>
-			<div className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>
+		<div
+			className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'
+			onClick={onClose}
+		>
+			<div
+				className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'
+				onClick={(e) => e.stopPropagation()}
+			>
 				<h3 className='mb-4 text-lg font-semibold'>
 					{isEditMode ? 'Edit Client' : 'Add Client'}
 				</h3>
 
-				<form onSubmit={handleSubmit} className='space-y-4'>
-					<input
-						name='fullName'
-						placeholder='Full name'
-						value={form.fullName}
-						onChange={handleChange}
-						className='w-full rounded border px-3 py-2'
-					/>
+				<form
+					onSubmit={handleSubmit(submitHandler)}
+					className='space-y-4'
+				>
+					<div>
+						<input
+							{...register('fullName')}
+							placeholder='Full name'
+							className='w-full rounded border px-3 py-2'
+						/>
+						{errors.fullName && (
+							<p className='mt-1 text-sm text-red-600'>
+								{errors.fullName.message}
+							</p>
+						)}
+					</div>
 
-					<input
-						name='email'
-						placeholder='Email'
-						value={form.email}
-						onChange={handleChange}
-						className='w-full rounded border px-3 py-2'
-					/>
+					<div>
+						<input
+							{...register('email')}
+							placeholder='Email'
+							className='w-full rounded border px-3 py-2'
+						/>
+						{errors.email && (
+							<p className='mt-1 text-sm text-red-600'>
+								{errors.email.message}
+							</p>
+						)}
+					</div>
 
-					<input
-						name='company'
-						placeholder='Company'
-						value={form.company}
-						onChange={handleChange}
-						className='w-full rounded border px-3 py-2'
-					/>
+					<div>
+						<input
+							{...register('company')}
+							placeholder='Company'
+							className='w-full rounded border px-3 py-2'
+						/>
+						{errors.company && (
+							<p className='mt-1 text-sm text-red-600'>
+								{errors.company.message}
+							</p>
+						)}
+					</div>
 
-					<select
-						name='status'
-						value={form.status}
-						onChange={handleChange}
-						className='w-full rounded border px-3 py-2'
-					>
-						<option value='lead'>Lead</option>
-						<option value='active'>Active</option>
-						<option value='inactive'>Inactive</option>
-					</select>
+					<div>
+						<select
+							{...register('status')}
+							className='w-full rounded border px-3 py-2'
+						>
+							<option value='lead'>Lead</option>
+							<option value='active'>Active</option>
+							<option value='inactive'>Inactive</option>
+						</select>
+						{errors.status && (
+							<p className='mt-1 text-sm text-red-600'>
+								{errors.status.message}
+							</p>
+						)}
+					</div>
 
-					<input
-						name='source'
-						placeholder='Source'
-						value={form.source}
-						onChange={handleChange}
-						className='w-full rounded border px-3 py-2'
-					/>
+					<div>
+						<input
+							{...register('source')}
+							placeholder='Source'
+							className='w-full rounded border px-3 py-2'
+						/>
+						{errors.source && (
+							<p className='mt-1 text-sm text-red-600'>
+								{errors.source.message}
+							</p>
+						)}
+					</div>
 
 					<div className='flex justify-end gap-2'>
 						<button
