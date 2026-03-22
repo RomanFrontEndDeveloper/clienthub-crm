@@ -4,8 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { ClientsFilters } from '@/features/clients/components/ClientsFilters';
 import { ClientsPagination } from '@/features/clients/components/ClientsPagination';
 import { ClientsTable } from '@/features/clients/components/ClientsTable';
+import { CreateClientModal } from '@/features/clients/components/CreateClientModal';
 import { useClients } from '@/features/clients/hooks/useClients';
-import { ClientStatus, ClientsSortOption } from '@/features/clients/types';
+import {
+	Client,
+	ClientStatus,
+	ClientsSortOption,
+} from '@/features/clients/types';
 
 const CLIENTS_PER_PAGE = 5;
 
@@ -18,13 +23,15 @@ export default function ClientsPage() {
 	);
 	const [sortOption, setSortOption] = useState<ClientsSortOption>('name-asc');
 	const [currentPage, setCurrentPage] = useState(1);
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [localClients, setLocalClients] = useState<Client[]>([]);
+
+	const clientsData = localClients.length ? localClients : data || [];
 
 	const filteredClients = useMemo(() => {
-		if (!data) return [];
-
 		const normalizedSearchTerm = searchTerm.toLowerCase();
 
-		const filtered = data.filter((client) => {
+		const filtered = clientsData.filter((client) => {
 			const matchesSearch =
 				client.fullName.toLowerCase().includes(normalizedSearchTerm) ||
 				client.email.toLowerCase().includes(normalizedSearchTerm) ||
@@ -62,7 +69,7 @@ export default function ClientsPage() {
 		});
 
 		return sorted;
-	}, [data, searchTerm, selectedStatus, sortOption]);
+	}, [clientsData, searchTerm, selectedStatus, sortOption]);
 
 	const totalPages = Math.ceil(filteredClients.length / CLIENTS_PER_PAGE);
 
@@ -77,6 +84,13 @@ export default function ClientsPage() {
 		setCurrentPage(1);
 	}, [searchTerm, selectedStatus, sortOption]);
 
+	const handleCreateClient = (newClient: Client) => {
+		setLocalClients((prev) => [
+			newClient,
+			...(prev.length ? prev : data || []),
+		]);
+	};
+
 	if (isLoading) {
 		return <div>Loading clients...</div>;
 	}
@@ -87,11 +101,22 @@ export default function ClientsPage() {
 
 	return (
 		<div className='space-y-6'>
-			<div>
-				<h2 className='text-2xl font-bold text-gray-900'>Clients</h2>
-				<p className='text-sm text-gray-500'>
-					Manage your clients and track their status.
-				</p>
+			<div className='flex items-center justify-between'>
+				<div>
+					<h2 className='text-2xl font-bold text-gray-900'>
+						Clients
+					</h2>
+					<p className='text-sm text-gray-500'>
+						Manage your clients and track their status.
+					</p>
+				</div>
+
+				<button
+					onClick={() => setIsModalOpen(true)}
+					className='rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800'
+				>
+					Add Client
+				</button>
 			</div>
 
 			<ClientsFilters
@@ -110,6 +135,13 @@ export default function ClientsPage() {
 				totalPages={totalPages}
 				onPageChange={setCurrentPage}
 			/>
+
+			{isModalOpen && (
+				<CreateClientModal
+					onClose={() => setIsModalOpen(false)}
+					onCreate={handleCreateClient}
+				/>
+			)}
 		</div>
 	);
 }
