@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ClientsFilters } from '@/features/clients/components/ClientsFilters';
 import { ClientsPagination } from '@/features/clients/components/ClientsPagination';
 import { ClientsTable } from '@/features/clients/components/ClientsTable';
@@ -24,9 +24,12 @@ export default function ClientsPage() {
 	const [sortOption, setSortOption] = useState<ClientsSortOption>('name-asc');
 	const [currentPage, setCurrentPage] = useState(1);
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [editingClient, setEditingClient] = useState<Client | null>(null);
 	const [localClients, setLocalClients] = useState<Client[]>([]);
 
-	const clientsData = localClients.length ? localClients : data || [];
+	const clientsData = useMemo(() => {
+		return localClients.length ? localClients : data || [];
+	}, [localClients, data]);
 
 	const filteredClients = useMemo(() => {
 		const normalizedSearchTerm = searchTerm.toLowerCase();
@@ -47,22 +50,18 @@ export default function ClientsPage() {
 			switch (sortOption) {
 				case 'name-asc':
 					return a.fullName.localeCompare(b.fullName);
-
 				case 'name-desc':
 					return b.fullName.localeCompare(a.fullName);
-
 				case 'date-desc':
 					return (
 						new Date(b.createdAt).getTime() -
 						new Date(a.createdAt).getTime()
 					);
-
 				case 'date-asc':
 					return (
 						new Date(a.createdAt).getTime() -
 						new Date(b.createdAt).getTime()
 					);
-
 				default:
 					return 0;
 			}
@@ -80,15 +79,34 @@ export default function ClientsPage() {
 		return filteredClients.slice(startIndex, endIndex);
 	}, [filteredClients, currentPage]);
 
-	useEffect(() => {
-		setCurrentPage(1);
-	}, [searchTerm, selectedStatus, sortOption]);
+	const handleOpenCreateModal = () => {
+		setEditingClient(null);
+		setIsModalOpen(true);
+	};
 
-	const handleCreateClient = (newClient: Client) => {
-		setLocalClients((prev) => [
-			newClient,
-			...(prev.length ? prev : data || []),
-		]);
+	const handleOpenEditModal = (client: Client) => {
+		setEditingClient(client);
+		setIsModalOpen(true);
+	};
+
+	const handleSubmitClient = (client: Client) => {
+		const baseClients = localClients.length ? localClients : data || [];
+		const existingClient = baseClients.find(
+			(item) => item.id === client.id,
+		);
+
+		if (existingClient) {
+			setLocalClients((prev) =>
+				(prev.length ? prev : baseClients).map((item) =>
+					item.id === client.id ? client : item,
+				),
+			);
+		} else {
+			setLocalClients((prev) => [
+				client,
+				...(prev.length ? prev : baseClients),
+			]);
+		}
 	};
 
 	if (isLoading) {
@@ -98,6 +116,65 @@ export default function ClientsPage() {
 	if (error) {
 		return <div>Something went wrong while loading clients.</div>;
 	}
+
+	const handleDeleteClient = (clientId: string) => {
+		const confirmed = window.confirm(
+			'Are you sure you want to delete this client?',
+		);
+
+		if (!confirmed) return;
+
+		const baseClients = localClients.length ? localClients : data || [];
+		const updatedClients = baseClients.filter(
+			(client) => client.id !== clientId,
+		);
+
+		setLocalClients(updatedClients);
+
+		const normalizedSearchTerm = searchTerm.toLowerCase();
+
+		const filteredAfterDelete = updatedClients.filter((client) => {
+			const matchesSearch =
+				client.fullName.toLowerCase().includes(normalizedSearchTerm) ||
+				client.email.toLowerCase().includes(normalizedSearchTerm) ||
+				client.company.toLowerCase().includes(normalizedSearchTerm);
+
+			const matchesStatus =
+				selectedStatus === 'all' || client.status === selectedStatus;
+
+			return matchesSearch && matchesStatus;
+		});
+
+		const sortedAfterDelete = [...filteredAfterDelete].sort((a, b) => {
+			switch (sortOption) {
+				case 'name-asc':
+					return a.fullName.localeCompare(b.fullName);
+				case 'name-desc':
+					return b.fullName.localeCompare(a.fullName);
+				case 'date-desc':
+					return (
+						new Date(b.createdAt).getTime() -
+						new Date(a.createdAt).getTime()
+					);
+				case 'date-asc':
+					return (
+						new Date(a.createdAt).getTime() -
+						new Date(b.createdAt).getTime()
+					);
+				default:
+					return 0;
+			}
+		});
+
+		const totalPagesAfterDelete = Math.max(
+			1,
+			Math.ceil(sortedAfterDelete.length / CLIENTS_PER_PAGE),
+		);
+
+		if (currentPage > totalPagesAfterDelete) {
+			setCurrentPage(totalPagesAfterDelete);
+		}
+	};
 
 	return (
 		<div className='space-y-6'>
@@ -112,7 +189,7 @@ export default function ClientsPage() {
 				</div>
 
 				<button
-					onClick={() => setIsModalOpen(true)}
+					onClick={handleOpenCreateModal}
 					className='rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800'
 				>
 					Add Client
@@ -123,12 +200,25 @@ export default function ClientsPage() {
 				searchTerm={searchTerm}
 				selectedStatus={selectedStatus}
 				sortOption={sortOption}
-				onSearchChange={setSearchTerm}
-				onStatusChange={setSelectedStatus}
-				onSortChange={setSortOption}
+				onSearchChange={(value) => {
+					setSearchTerm(value);
+					setCurrentPage(1);
+				}}
+				onStatusChange={(value) => {
+					setSelectedStatus(value);
+					setCurrentPage(1);
+				}}
+				onSortChange={(value) => {
+					setSortOption(value);
+					setCurrentPage(1);
+				}}
 			/>
 
-			<ClientsTable clients={paginatedClients} />
+			<ClientsTable
+				clients={paginatedClients}
+				onEditClient={handleOpenEditModal}
+				onDeleteClient={handleDeleteClient}
+			/>
 
 			<ClientsPagination
 				currentPage={currentPage}
@@ -138,8 +228,12 @@ export default function ClientsPage() {
 
 			{isModalOpen && (
 				<CreateClientModal
-					onClose={() => setIsModalOpen(false)}
-					onCreate={handleCreateClient}
+					onClose={() => {
+						setIsModalOpen(false);
+						setEditingClient(null);
+					}}
+					onSubmit={handleSubmitClient}
+					initialData={editingClient}
 				/>
 			)}
 		</div>
