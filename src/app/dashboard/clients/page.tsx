@@ -1,10 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ClientsFilters } from '@/features/clients/components/ClientsFilters';
+import { ClientsPagination } from '@/features/clients/components/ClientsPagination';
 import { ClientsTable } from '@/features/clients/components/ClientsTable';
 import { useClients } from '@/features/clients/hooks/useClients';
 import { ClientStatus, ClientsSortOption } from '@/features/clients/types';
+
+const CLIENTS_PER_PAGE = 5;
 
 export default function ClientsPage() {
 	const { data, isLoading, error } = useClients();
@@ -14,6 +17,7 @@ export default function ClientsPage() {
 		'all',
 	);
 	const [sortOption, setSortOption] = useState<ClientsSortOption>('name-asc');
+	const [currentPage, setCurrentPage] = useState(1);
 
 	const filteredClients = useMemo(() => {
 		if (!data) return [];
@@ -60,6 +64,19 @@ export default function ClientsPage() {
 		return sorted;
 	}, [data, searchTerm, selectedStatus, sortOption]);
 
+	const totalPages = Math.ceil(filteredClients.length / CLIENTS_PER_PAGE);
+
+	const paginatedClients = useMemo(() => {
+		const startIndex = (currentPage - 1) * CLIENTS_PER_PAGE;
+		const endIndex = startIndex + CLIENTS_PER_PAGE;
+
+		return filteredClients.slice(startIndex, endIndex);
+	}, [filteredClients, currentPage]);
+
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [searchTerm, selectedStatus, sortOption]);
+
 	if (isLoading) {
 		return <div>Loading clients...</div>;
 	}
@@ -86,7 +103,13 @@ export default function ClientsPage() {
 				onSortChange={setSortOption}
 			/>
 
-			<ClientsTable clients={filteredClients} />
+			<ClientsTable clients={paginatedClients} />
+
+			<ClientsPagination
+				currentPage={currentPage}
+				totalPages={totalPages}
+				onPageChange={setCurrentPage}
+			/>
 		</div>
 	);
 }
