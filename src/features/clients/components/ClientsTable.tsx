@@ -23,32 +23,45 @@ export function ClientsTable({ clients }: ClientsTableProps) {
 						</tr>
 					</thead>
 
-					<tbody>
-						{clients.map((client) => (
-							<tr
-								key={client.id}
-								className='border-t border-gray-200 hover:bg-gray-50'
-							>
-								<td className='px-4 py-3 font-medium text-gray-900'>
-									{client.fullName}
-								</td>
-								<td className='px-4 py-3 text-gray-600'>
-									{client.email}
-								</td>
-								<td className='px-4 py-3 text-gray-600'>
-									{client.company}
-								</td>
-								<td className='px-4 py-3'>
-									<ClientStatusBadge status={client.status} />
-								</td>
-								<td className='px-4 py-3 text-gray-600'>
-									{client.source}
-								</td>
-								<td className='px-4 py-3 text-gray-600'>
-									{client.createdAt}
+					<tbody className='divide-y divide-gray-100'>
+						{clients.length > 0 ? (
+							clients.map((client) => (
+								<tr
+									key={client.id}
+									className='hover:bg-gray-50'
+								>
+									<td className='px-4 py-3 font-medium text-gray-900'>
+										{client.fullName}
+									</td>
+									<td className='px-4 py-3 text-gray-600'>
+										{client.email}
+									</td>
+									<td className='px-4 py-3 text-gray-600'>
+										{client.company}
+									</td>
+									<td className='px-4 py-3'>
+										<ClientStatusBadge
+											status={client.status}
+										/>
+									</td>
+									<td className='px-4 py-3 text-gray-600'>
+										{client.source}
+									</td>
+									<td className='px-4 py-3 text-gray-600'>
+										{client.createdAt}
+									</td>
+								</tr>
+							))
+						) : (
+							<tr>
+								<td
+									colSpan={6}
+									className='px-4 py-8 text-center text-sm text-gray-500'
+								>
+									No clients found.
 								</td>
 							</tr>
-						))}
+						)}
 					</tbody>
 				</table>
 			</div>

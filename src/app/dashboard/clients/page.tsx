@@ -1,10 +1,64 @@
 'use client';
 
+import { useMemo, useState } from 'react';
+import { ClientsFilters } from '@/features/clients/components/ClientsFilters';
 import { ClientsTable } from '@/features/clients/components/ClientsTable';
 import { useClients } from '@/features/clients/hooks/useClients';
+import { ClientStatus, ClientsSortOption } from '@/features/clients/types';
 
 export default function ClientsPage() {
 	const { data, isLoading, error } = useClients();
+
+	const [searchTerm, setSearchTerm] = useState('');
+	const [selectedStatus, setSelectedStatus] = useState<'all' | ClientStatus>(
+		'all',
+	);
+	const [sortOption, setSortOption] = useState<ClientsSortOption>('name-asc');
+
+	const filteredClients = useMemo(() => {
+		if (!data) return [];
+
+		const normalizedSearchTerm = searchTerm.toLowerCase();
+
+		const filtered = data.filter((client) => {
+			const matchesSearch =
+				client.fullName.toLowerCase().includes(normalizedSearchTerm) ||
+				client.email.toLowerCase().includes(normalizedSearchTerm) ||
+				client.company.toLowerCase().includes(normalizedSearchTerm);
+
+			const matchesStatus =
+				selectedStatus === 'all' || client.status === selectedStatus;
+
+			return matchesSearch && matchesStatus;
+		});
+
+		const sorted = [...filtered].sort((a, b) => {
+			switch (sortOption) {
+				case 'name-asc':
+					return a.fullName.localeCompare(b.fullName);
+
+				case 'name-desc':
+					return b.fullName.localeCompare(a.fullName);
+
+				case 'date-desc':
+					return (
+						new Date(b.createdAt).getTime() -
+						new Date(a.createdAt).getTime()
+					);
+
+				case 'date-asc':
+					return (
+						new Date(a.createdAt).getTime() -
+						new Date(b.createdAt).getTime()
+					);
+
+				default:
+					return 0;
+			}
+		});
+
+		return sorted;
+	}, [data, searchTerm, selectedStatus, sortOption]);
 
 	if (isLoading) {
 		return <div>Loading clients...</div>;
@@ -18,22 +72,21 @@ export default function ClientsPage() {
 		<div className='space-y-6'>
 			<div>
 				<h2 className='text-2xl font-bold text-gray-900'>Clients</h2>
-				<p className='text-sm text-gray-600'>
-					Manage your client list and monitor their status.
+				<p className='text-sm text-gray-500'>
+					Manage your clients and track their status.
 				</p>
 			</div>
 
-			{data && <ClientsTable clients={data} />}
+			<ClientsFilters
+				searchTerm={searchTerm}
+				selectedStatus={selectedStatus}
+				sortOption={sortOption}
+				onSearchChange={setSearchTerm}
+				onStatusChange={setSelectedStatus}
+				onSortChange={setSortOption}
+			/>
+
+			<ClientsTable clients={filteredClients} />
 		</div>
 	);
 }
-
-// src/features/clients/
-//   types.ts
-//   hooks/
-//     useClients.ts
-//   services/
-//     clients.service.ts
-//   components/
-//     ClientStatusBadge.tsx
-//     ClientsTable.tsx

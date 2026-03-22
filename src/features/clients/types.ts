@@ -10,3 +10,9 @@ export interface Client {
 	source: string;
 	createdAt: string;
 }
+
+export type ClientsSortOption =
+	| 'name-asc'
+	| 'name-desc'
+	| 'date-desc'
+	| 'date-asc';
