@@ -1,13 +1,14 @@
-export type DealStatus = 'new' | 'in_progress' | 'closed' | 'lost';
+export type DealStatus = 'lead' | 'negotiation' | 'won' | 'lost';
 
-export type Deal = {
+export interface Deal {
 	id: string;
 	title: string;
+	clientName: string;
 	value: number;
 	status: DealStatus;
-	clientName: string;
+	manager: string;
 	createdAt: string;
-};
+}
 
 export type DealsSortOption =
 	| 'title-asc'
