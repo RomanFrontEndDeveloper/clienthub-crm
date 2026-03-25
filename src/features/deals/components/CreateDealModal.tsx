@@ -112,7 +112,7 @@ export function CreateDealModal({ onClose, onSubmit, initialData }: Props) {
 					<div>
 						<input
 							type='number'
-							{...register('value')}
+							{...register('value', { valueAsNumber: true })}
 							placeholder='Deal value'
 							className='w-full rounded border px-3 py-2'
 						/>
