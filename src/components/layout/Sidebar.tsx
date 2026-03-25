@@ -9,8 +9,6 @@ const navItems = [
 	{ href: '/dashboard/clients', label: 'Clients' },
 	{ href: '/dashboard/deals', label: 'Deals' },
 	{ href: '/dashboard/tasks', label: 'Tasks' },
-	{ href: '/dashboard/users', label: 'Users' },
-	{ href: '/dashboard/analytics', label: 'Analytics' },
 ];
 
 export function Sidebar() {
