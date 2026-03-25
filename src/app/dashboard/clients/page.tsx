@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ClientsFilters } from '@/features/clients/components/ClientsFilters';
 import { ClientsPagination } from '@/features/clients/components/ClientsPagination';
 import { ClientsTable } from '@/features/clients/components/ClientsTable';
@@ -11,11 +11,18 @@ import {
 	ClientStatus,
 	ClientsSortOption,
 } from '@/features/clients/types';
+import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 
 const CLIENTS_PER_PAGE = 5;
 
 export default function ClientsPage() {
 	const { data, isLoading, error } = useClients();
+
+	const {
+		state: clients,
+		setState: setClients,
+		isHydrated,
+	} = useLocalStorageState<Client[]>('crm-clients', []);
 
 	const [searchTerm, setSearchTerm] = useState('');
 	const [selectedStatus, setSelectedStatus] = useState<'all' | ClientStatus>(
@@ -25,16 +32,17 @@ export default function ClientsPage() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [editingClient, setEditingClient] = useState<Client | null>(null);
-	const [localClients, setLocalClients] = useState<Client[]>([]);
 
-	const clientsData = useMemo(() => {
-		return localClients.length ? localClients : data || [];
-	}, [localClients, data]);
+	useEffect(() => {
+		if (isHydrated && clients.length === 0 && data) {
+			setClients(data);
+		}
+	}, [data, isHydrated, clients.length, setClients]);
 
 	const filteredClients = useMemo(() => {
-		const normalizedSearchTerm = searchTerm.toLowerCase();
+		const normalizedSearchTerm = searchTerm.toLowerCase().trim();
 
-		const filtered = clientsData.filter((client) => {
+		const filtered = clients.filter((client) => {
 			const matchesSearch =
 				client.fullName.toLowerCase().includes(normalizedSearchTerm) ||
 				client.email.toLowerCase().includes(normalizedSearchTerm) ||
@@ -50,25 +58,29 @@ export default function ClientsPage() {
 			switch (sortOption) {
 				case 'name-asc':
 					return a.fullName.localeCompare(b.fullName);
+
 				case 'name-desc':
 					return b.fullName.localeCompare(a.fullName);
+
 				case 'date-desc':
 					return (
 						new Date(b.createdAt).getTime() -
 						new Date(a.createdAt).getTime()
 					);
+
 				case 'date-asc':
 					return (
 						new Date(a.createdAt).getTime() -
 						new Date(b.createdAt).getTime()
 					);
+
 				default:
 					return 0;
 			}
 		});
 
 		return sorted;
-	}, [clientsData, searchTerm, selectedStatus, sortOption]);
+	}, [clients, searchTerm, selectedStatus, sortOption]);
 
 	const totalPages = Math.ceil(filteredClients.length / CLIENTS_PER_PAGE);
 
@@ -90,32 +102,20 @@ export default function ClientsPage() {
 	};
 
 	const handleSubmitClient = (client: Client) => {
-		const baseClients = localClients.length ? localClients : data || [];
-		const existingClient = baseClients.find(
-			(item) => item.id === client.id,
-		);
+		setClients((prev) => {
+			const existingClient = prev.find((item) => item.id === client.id);
 
-		if (existingClient) {
-			setLocalClients((prev) =>
-				(prev.length ? prev : baseClients).map((item) =>
+			if (existingClient) {
+				return prev.map((item) =>
 					item.id === client.id ? client : item,
-				),
-			);
-		} else {
-			setLocalClients((prev) => [
-				client,
-				...(prev.length ? prev : baseClients),
-			]);
-		}
+				);
+			}
+
+			return [client, ...prev];
+		});
+
+		setCurrentPage(1);
 	};
-
-	if (isLoading) {
-		return <div>Loading clients...</div>;
-	}
-
-	if (error) {
-		return <div>Something went wrong while loading clients.</div>;
-	}
 
 	const handleDeleteClient = (clientId: string) => {
 		const confirmed = window.confirm(
@@ -124,14 +124,13 @@ export default function ClientsPage() {
 
 		if (!confirmed) return;
 
-		const baseClients = localClients.length ? localClients : data || [];
-		const updatedClients = baseClients.filter(
+		const updatedClients = clients.filter(
 			(client) => client.id !== clientId,
 		);
 
-		setLocalClients(updatedClients);
+		setClients(updatedClients);
 
-		const normalizedSearchTerm = searchTerm.toLowerCase();
+		const normalizedSearchTerm = searchTerm.toLowerCase().trim();
 
 		const filteredAfterDelete = updatedClients.filter((client) => {
 			const matchesSearch =
@@ -149,18 +148,22 @@ export default function ClientsPage() {
 			switch (sortOption) {
 				case 'name-asc':
 					return a.fullName.localeCompare(b.fullName);
+
 				case 'name-desc':
 					return b.fullName.localeCompare(a.fullName);
+
 				case 'date-desc':
 					return (
 						new Date(b.createdAt).getTime() -
 						new Date(a.createdAt).getTime()
 					);
+
 				case 'date-asc':
 					return (
 						new Date(a.createdAt).getTime() -
 						new Date(b.createdAt).getTime()
 					);
+
 				default:
 					return 0;
 			}
@@ -175,6 +178,14 @@ export default function ClientsPage() {
 			setCurrentPage(totalPagesAfterDelete);
 		}
 	};
+
+	if (isLoading && !isHydrated) {
+		return <div>Loading clients...</div>;
+	}
+
+	if (error && !data && clients.length === 0) {
+		return <div>Something went wrong while loading clients.</div>;
+	}
 
 	return (
 		<div className='space-y-6'>

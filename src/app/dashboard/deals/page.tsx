@@ -1,17 +1,24 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CreateDealModal } from '@/features/deals/components/CreateDealModal';
 import { DealsFilters } from '@/features/deals/components/DealsFilters';
 import { DealsPagination } from '@/features/deals/components/DealsPagination';
 import { DealsTable } from '@/features/deals/components/DealsTable';
 import { useDeals } from '@/features/deals/hooks/useDeals';
 import { Deal, DealsSortOption, DealStatus } from '@/features/deals/types';
+import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 
 const DEALS_PER_PAGE = 5;
 
 export default function DealsPage() {
 	const { data, isLoading, error } = useDeals();
+
+	const {
+		state: deals,
+		setState: setDeals,
+		isHydrated,
+	} = useLocalStorageState<Deal[]>('crm-deals', []);
 
 	const [searchTerm, setSearchTerm] = useState('');
 	const [selectedStatus, setSelectedStatus] = useState<'all' | DealStatus>(
@@ -22,16 +29,17 @@ export default function DealsPage() {
 
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
-	const [localDeals, setLocalDeals] = useState<Deal[]>([]);
 
-	const dealsData = useMemo(() => {
-		return localDeals.length ? localDeals : data || [];
-	}, [localDeals, data]);
+	useEffect(() => {
+		if (isHydrated && deals.length === 0 && data) {
+			setDeals(data);
+		}
+	}, [data, isHydrated, deals.length, setDeals]);
 
 	const filteredDeals = useMemo(() => {
-		const normalizedSearchTerm = searchTerm.toLowerCase();
+		const normalizedSearchTerm = searchTerm.toLowerCase().trim();
 
-		const filtered = dealsData.filter((deal) => {
+		const filtered = deals.filter((deal) => {
 			const matchesSearch =
 				deal.title.toLowerCase().includes(normalizedSearchTerm) ||
 				deal.clientName.toLowerCase().includes(normalizedSearchTerm);
@@ -46,29 +54,35 @@ export default function DealsPage() {
 			switch (sortOption) {
 				case 'title-asc':
 					return a.title.localeCompare(b.title);
+
 				case 'title-desc':
 					return b.title.localeCompare(a.title);
+
 				case 'date-desc':
 					return (
 						new Date(b.createdAt).getTime() -
 						new Date(a.createdAt).getTime()
 					);
+
 				case 'date-asc':
 					return (
 						new Date(a.createdAt).getTime() -
 						new Date(b.createdAt).getTime()
 					);
+
 				case 'value-desc':
 					return b.value - a.value;
+
 				case 'value-asc':
 					return a.value - b.value;
+
 				default:
 					return 0;
 			}
 		});
 
 		return sorted;
-	}, [dealsData, searchTerm, selectedStatus, sortOption]);
+	}, [deals, searchTerm, selectedStatus, sortOption]);
 
 	const totalPages = Math.max(
 		1,
@@ -93,21 +107,17 @@ export default function DealsPage() {
 	};
 
 	const handleSubmitDeal = (deal: Deal) => {
-		const baseDeals = localDeals.length ? localDeals : data || [];
-		const existingDeal = baseDeals.find((item) => item.id === deal.id);
+		setDeals((prev) => {
+			const existingDeal = prev.find((item) => item.id === deal.id);
 
-		if (existingDeal) {
-			setLocalDeals((prev) =>
-				(prev.length ? prev : baseDeals).map((item) =>
-					item.id === deal.id ? deal : item,
-				),
-			);
-		} else {
-			setLocalDeals((prev) => [
-				deal,
-				...(prev.length ? prev : baseDeals),
-			]);
-		}
+			if (existingDeal) {
+				return prev.map((item) => (item.id === deal.id ? deal : item));
+			}
+
+			return [deal, ...prev];
+		});
+
+		setCurrentPage(1);
 	};
 
 	const handleDeleteDeal = (dealId: string) => {
@@ -117,12 +127,11 @@ export default function DealsPage() {
 
 		if (!confirmed) return;
 
-		const baseDeals = localDeals.length ? localDeals : data || [];
-		const updatedDeals = baseDeals.filter((deal) => deal.id !== dealId);
+		const updatedDeals = deals.filter((deal) => deal.id !== dealId);
 
-		setLocalDeals(updatedDeals);
+		setDeals(updatedDeals);
 
-		const normalizedSearchTerm = searchTerm.toLowerCase();
+		const normalizedSearchTerm = searchTerm.toLowerCase().trim();
 
 		const filteredAfterDelete = updatedDeals.filter((deal) => {
 			const matchesSearch =
@@ -139,22 +148,28 @@ export default function DealsPage() {
 			switch (sortOption) {
 				case 'title-asc':
 					return a.title.localeCompare(b.title);
+
 				case 'title-desc':
 					return b.title.localeCompare(a.title);
+
 				case 'date-desc':
 					return (
 						new Date(b.createdAt).getTime() -
 						new Date(a.createdAt).getTime()
 					);
+
 				case 'date-asc':
 					return (
 						new Date(a.createdAt).getTime() -
 						new Date(b.createdAt).getTime()
 					);
+
 				case 'value-desc':
 					return b.value - a.value;
+
 				case 'value-asc':
 					return a.value - b.value;
+
 				default:
 					return 0;
 			}
@@ -170,11 +185,11 @@ export default function DealsPage() {
 		}
 	};
 
-	if (isLoading) {
+	if (isLoading && !isHydrated) {
 		return <div>Loading deals...</div>;
 	}
 
-	if (error) {
+	if (error && !data && deals.length === 0) {
 		return <div>Something went wrong while loading deals.</div>;
 	}
 

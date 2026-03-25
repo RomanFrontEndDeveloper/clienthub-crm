@@ -12,6 +12,7 @@ import {
 	TaskStatus,
 	TasksSortOption,
 } from '@/features/tasks/types';
+import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -43,7 +44,12 @@ function getPriorityWeight(priority: TaskPriority) {
 export default function TasksPage() {
 	const { data, isLoading, error } = useTasks();
 
-	const [tasks, setTasks] = useState<Task[]>([]);
+	const {
+		state: tasks,
+		setState: setTasks,
+		isHydrated,
+	} = useLocalStorageState<Task[]>('crm-tasks', []);
+
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -60,10 +66,10 @@ export default function TasksPage() {
 	const [currentPage, setCurrentPage] = useState(1);
 
 	useEffect(() => {
-		if (data) {
+		if (isHydrated && tasks.length === 0 && data) {
 			setTasks(data);
 		}
-	}, [data]);
+	}, [data, isHydrated, tasks.length, setTasks]);
 
 	const filteredTasks = useMemo(() => {
 		const normalizedSearchTerm = searchTerm.toLowerCase().trim();
@@ -201,7 +207,7 @@ export default function TasksPage() {
 		setEditingTask(null);
 	};
 
-	if (isLoading) {
+	if (isLoading && !isHydrated) {
 		return (
 			<div className='rounded-xl bg-white p-6 shadow-sm'>
 				Loading tasks...
@@ -209,7 +215,7 @@ export default function TasksPage() {
 		);
 	}
 
-	if (error) {
+	if (error && !data && tasks.length === 0) {
 		return (
 			<div className='rounded-xl bg-white p-6 text-red-500 shadow-sm'>
 				Failed to load tasks.
