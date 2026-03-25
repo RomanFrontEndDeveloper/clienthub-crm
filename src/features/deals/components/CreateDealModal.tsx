@@ -9,7 +9,7 @@ type Props = {
 	onSubmit: (deal: Deal) => void;
 	initialData?: Deal | null;
 };
-
+// m
 export function CreateDealModal({ onClose, onSubmit, initialData }: Props) {
 	const isEditMode = Boolean(initialData);
 
