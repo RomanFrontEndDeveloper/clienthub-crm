@@ -25,7 +25,7 @@ export function DashboardStats({ clients, deals, tasks }: Props) {
 	const totalClients = clients.length;
 
 	const activeDeals = deals.filter(
-		(deal) => deal.status === 'lead' || deal.status === 'negotiation',
+		(deal) => deal.status === 'new' || deal.status === 'in_progress',
 	).length;
 
 	const overdueTasks = tasks.filter(isTaskOverdue).length;
@@ -45,7 +45,7 @@ export function DashboardStats({ clients, deals, tasks }: Props) {
 			<StatCard
 				title='Active Deals'
 				value={activeDeals}
-				description='Lead and negotiation deals'
+				description='New and in-progress deals'
 			/>
 
 			<StatCard

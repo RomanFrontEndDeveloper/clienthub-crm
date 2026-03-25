@@ -1,16 +1,36 @@
+'use client';
+
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { dealSchema, DealFormData } from '@/schemas/dealSchema';
+import {
+	dealSchema,
+	DealFormValues,
+	DealFormOutput,
+} from '@/schemas/dealSchema';
+import { Client } from '@/features/clients/types';
 import { Deal } from '../types';
 
 type Props = {
 	onClose: () => void;
 	onSubmit: (deal: Deal) => void;
 	initialData?: Deal | null;
+	clients: Client[];
 };
-// m
-export function CreateDealModal({ onClose, onSubmit, initialData }: Props) {
+
+const defaultValues: DealFormValues = {
+	title: '',
+	value: 0,
+	status: 'new',
+	clientId: '',
+};
+
+export function CreateDealModal({
+	onClose,
+	onSubmit,
+	initialData = null,
+	clients,
+}: Props) {
 	const isEditMode = Boolean(initialData);
 
 	const {
@@ -18,47 +38,40 @@ export function CreateDealModal({ onClose, onSubmit, initialData }: Props) {
 		handleSubmit,
 		reset,
 		formState: { errors },
-	} = useForm<DealFormData>({
+	} = useForm<DealFormValues, unknown, DealFormOutput>({
 		resolver: zodResolver(dealSchema),
-		defaultValues: {
-			title: '',
-			clientName: '',
-			value: 0,
-			status: 'lead',
-			manager: 'Roman',
-		},
+		defaultValues,
 	});
 
 	useEffect(() => {
 		if (initialData) {
 			reset({
 				title: initialData.title,
-				clientName: initialData.clientName,
 				value: initialData.value,
 				status: initialData.status,
-				manager: initialData.manager,
+				clientId: initialData.clientId,
 			});
 		} else {
-			reset({
-				title: '',
-				clientName: '',
-				value: 0,
-				status: 'lead',
-				manager: 'Roman',
-			});
+			reset(defaultValues);
 		}
 	}, [initialData, reset]);
 
-	const submitHandler = (formData: DealFormData) => {
+	const handleFormSubmit = (values: DealFormOutput) => {
+		const selectedClient = clients.find(
+			(client) => client.id === values.clientId,
+		);
+
+		if (!selectedClient) return;
+
 		const deal: Deal = {
-			id: initialData?.id || Date.now().toString(),
-			title: formData.title,
-			clientName: formData.clientName,
-			value: formData.value,
-			status: formData.status,
-			manager: formData.manager,
+			id: initialData?.id ?? Date.now().toString(),
+			title: values.title,
+			value: values.value,
+			status: values.status,
+			clientId: selectedClient.id,
+			clientName: selectedClient.fullName,
 			createdAt:
-				initialData?.createdAt ||
+				initialData?.createdAt ??
 				new Date().toISOString().split('T')[0],
 		};
 
@@ -67,106 +80,123 @@ export function CreateDealModal({ onClose, onSubmit, initialData }: Props) {
 	};
 
 	return (
-		<div
-			className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'
-			onClick={onClose}
-		>
-			<div
-				className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'
-				onClick={(e) => e.stopPropagation()}
-			>
-				<h3 className='mb-4 text-lg font-semibold'>
-					{isEditMode ? 'Edit Deal' : 'Add Deal'}
-				</h3>
+		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'>
+			<div className='w-full max-w-xl rounded-2xl bg-white shadow-xl'>
+				<div className='flex items-center justify-between border-b border-gray-200 px-6 py-4'>
+					<div>
+						<h2 className='text-xl font-semibold text-gray-900'>
+							{isEditMode ? 'Edit Deal' : 'Create Deal'}
+						</h2>
+						<p className='text-sm text-gray-500'>
+							{isEditMode
+								? 'Update deal details'
+								: 'Add a new deal to your CRM'}
+						</p>
+					</div>
+
+					<button
+						type='button'
+						onClick={onClose}
+						className='rounded-lg px-3 py-2 text-sm text-gray-500 transition hover:bg-gray-100 hover:text-gray-700'
+					>
+						Close
+					</button>
+				</div>
 
 				<form
-					onSubmit={handleSubmit(submitHandler)}
-					className='space-y-4'
+					onSubmit={handleSubmit(handleFormSubmit)}
+					className='space-y-5 px-6 py-5'
 				>
 					<div>
+						<label className='mb-1 block text-sm font-medium text-gray-700'>
+							Title
+						</label>
 						<input
+							type='text'
 							{...register('title')}
-							placeholder='Deal title'
-							className='w-full rounded border px-3 py-2'
+							className='w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400'
+							placeholder='Enter deal title'
 						/>
 						{errors.title && (
-							<p className='mt-1 text-sm text-red-600'>
+							<p className='mt-1 text-sm text-red-500'>
 								{errors.title.message}
 							</p>
 						)}
 					</div>
 
 					<div>
-						<input
-							{...register('clientName')}
-							placeholder='Client name'
-							className='w-full rounded border px-3 py-2'
-						/>
-						{errors.clientName && (
-							<p className='mt-1 text-sm text-red-600'>
-								{errors.clientName.message}
-							</p>
-						)}
-					</div>
-
-					<div>
+						<label className='mb-1 block text-sm font-medium text-gray-700'>
+							Value
+						</label>
 						<input
 							type='number'
-							{...register('value', { valueAsNumber: true })}
-							placeholder='Deal value'
-							className='w-full rounded border px-3 py-2'
+							{...register('value')}
+							className='w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400'
+							placeholder='Enter deal value'
 						/>
 						{errors.value && (
-							<p className='mt-1 text-sm text-red-600'>
+							<p className='mt-1 text-sm text-red-500'>
 								{errors.value.message}
 							</p>
 						)}
 					</div>
 
 					<div>
+						<label className='mb-1 block text-sm font-medium text-gray-700'>
+							Status
+						</label>
 						<select
 							{...register('status')}
-							className='w-full rounded border px-3 py-2'
+							className='w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400'
 						>
-							<option value='lead'>Lead</option>
-							<option value='negotiation'>Negotiation</option>
-							<option value='won'>Won</option>
+							<option value='new'>New</option>
+							<option value='in_progress'>In Progress</option>
+							<option value='closed'>Closed</option>
 							<option value='lost'>Lost</option>
 						</select>
 						{errors.status && (
-							<p className='mt-1 text-sm text-red-600'>
+							<p className='mt-1 text-sm text-red-500'>
 								{errors.status.message}
 							</p>
 						)}
 					</div>
 
 					<div>
-						<input
-							{...register('manager')}
-							placeholder='Manager'
-							className='w-full rounded border px-3 py-2'
-						/>
-						{errors.manager && (
-							<p className='mt-1 text-sm text-red-600'>
-								{errors.manager.message}
+						<label className='mb-1 block text-sm font-medium text-gray-700'>
+							Client
+						</label>
+						<select
+							{...register('clientId')}
+							className='w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400'
+						>
+							<option value=''>Select client</option>
+							{clients.map((client) => (
+								<option key={client.id} value={client.id}>
+									{client.fullName} — {client.company}
+								</option>
+							))}
+						</select>
+						{errors.clientId && (
+							<p className='mt-1 text-sm text-red-500'>
+								{errors.clientId.message}
 							</p>
 						)}
 					</div>
 
-					<div className='flex justify-end gap-2'>
+					<div className='flex items-center justify-end gap-3 border-t border-gray-200 pt-4'>
 						<button
 							type='button'
 							onClick={onClose}
-							className='px-4 py-2 text-sm'
+							className='rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50'
 						>
 							Cancel
 						</button>
 
 						<button
 							type='submit'
-							className='rounded bg-black px-4 py-2 text-sm text-white'
+							className='rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800'
 						>
-							{isEditMode ? 'Save Changes' : 'Create'}
+							{isEditMode ? 'Save Changes' : 'Create Deal'}
 						</button>
 					</div>
 				</form>

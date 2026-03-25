@@ -7,6 +7,7 @@ import { DealsPagination } from '@/features/deals/components/DealsPagination';
 import { DealsTable } from '@/features/deals/components/DealsTable';
 import { useDeals } from '@/features/deals/hooks/useDeals';
 import { Deal, DealsSortOption, DealStatus } from '@/features/deals/types';
+import { Client } from '@/features/clients/types';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 
 const DEALS_PER_PAGE = 5;
@@ -19,6 +20,11 @@ export default function DealsPage() {
 		setState: setDeals,
 		isHydrated,
 	} = useLocalStorageState<Deal[]>('crm-deals', []);
+
+	const { state: clients } = useLocalStorageState<Client[]>(
+		'crm-clients',
+		[],
+	);
 
 	const [searchTerm, setSearchTerm] = useState('');
 	const [selectedStatus, setSelectedStatus] = useState<'all' | DealStatus>(
@@ -249,6 +255,7 @@ export default function DealsPage() {
 					}}
 					onSubmit={handleSubmitDeal}
 					initialData={editingDeal}
+					clients={clients}
 				/>
 			)}
 		</div>

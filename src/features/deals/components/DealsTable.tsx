@@ -47,7 +47,7 @@ export function DealsTable({
 										<DealStatusBadge status={deal.status} />
 									</td>
 									<td className='px-4 py-3 text-gray-600'>
-										{deal.manager}
+										{deal.clientName}
 									</td>
 									<td className='px-4 py-3 text-gray-600'>
 										{deal.createdAt}
