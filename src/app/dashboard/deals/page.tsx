@@ -1,11 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { CreateDealModal } from '@/features/deals/components/CreateDealModal';
 import { DealsFilters } from '@/features/deals/components/DealsFilters';
 import { DealsPagination } from '@/features/deals/components/DealsPagination';
 import { DealsTable } from '@/features/deals/components/DealsTable';
 import { useDeals } from '@/features/deals/hooks/useDeals';
-import { DealsSortOption, DealStatus } from '@/features/deals/types';
+import { Deal, DealsSortOption, DealStatus } from '@/features/deals/types';
 
 const DEALS_PER_PAGE = 5;
 
@@ -19,7 +20,13 @@ export default function DealsPage() {
 	const [sortOption, setSortOption] = useState<DealsSortOption>('title-asc');
 	const [currentPage, setCurrentPage] = useState(1);
 
-	const dealsData = data || [];
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+	const [localDeals, setLocalDeals] = useState<Deal[]>([]);
+
+	const dealsData = useMemo(() => {
+		return localDeals.length ? localDeals : data || [];
+	}, [localDeals, data]);
 
 	const filteredDeals = useMemo(() => {
 		const normalizedSearchTerm = searchTerm.toLowerCase();
@@ -75,6 +82,94 @@ export default function DealsPage() {
 		return filteredDeals.slice(startIndex, endIndex);
 	}, [filteredDeals, currentPage]);
 
+	const handleOpenCreateModal = () => {
+		setEditingDeal(null);
+		setIsModalOpen(true);
+	};
+
+	const handleOpenEditModal = (deal: Deal) => {
+		setEditingDeal(deal);
+		setIsModalOpen(true);
+	};
+
+	const handleSubmitDeal = (deal: Deal) => {
+		const baseDeals = localDeals.length ? localDeals : data || [];
+		const existingDeal = baseDeals.find((item) => item.id === deal.id);
+
+		if (existingDeal) {
+			setLocalDeals((prev) =>
+				(prev.length ? prev : baseDeals).map((item) =>
+					item.id === deal.id ? deal : item,
+				),
+			);
+		} else {
+			setLocalDeals((prev) => [
+				deal,
+				...(prev.length ? prev : baseDeals),
+			]);
+		}
+	};
+
+	const handleDeleteDeal = (dealId: string) => {
+		const confirmed = window.confirm(
+			'Are you sure you want to delete this deal?',
+		);
+
+		if (!confirmed) return;
+
+		const baseDeals = localDeals.length ? localDeals : data || [];
+		const updatedDeals = baseDeals.filter((deal) => deal.id !== dealId);
+
+		setLocalDeals(updatedDeals);
+
+		const normalizedSearchTerm = searchTerm.toLowerCase();
+
+		const filteredAfterDelete = updatedDeals.filter((deal) => {
+			const matchesSearch =
+				deal.title.toLowerCase().includes(normalizedSearchTerm) ||
+				deal.clientName.toLowerCase().includes(normalizedSearchTerm);
+
+			const matchesStatus =
+				selectedStatus === 'all' || deal.status === selectedStatus;
+
+			return matchesSearch && matchesStatus;
+		});
+
+		const sortedAfterDelete = [...filteredAfterDelete].sort((a, b) => {
+			switch (sortOption) {
+				case 'title-asc':
+					return a.title.localeCompare(b.title);
+				case 'title-desc':
+					return b.title.localeCompare(a.title);
+				case 'date-desc':
+					return (
+						new Date(b.createdAt).getTime() -
+						new Date(a.createdAt).getTime()
+					);
+				case 'date-asc':
+					return (
+						new Date(a.createdAt).getTime() -
+						new Date(b.createdAt).getTime()
+					);
+				case 'value-desc':
+					return b.value - a.value;
+				case 'value-asc':
+					return a.value - b.value;
+				default:
+					return 0;
+			}
+		});
+
+		const totalPagesAfterDelete = Math.max(
+			1,
+			Math.ceil(sortedAfterDelete.length / DEALS_PER_PAGE),
+		);
+
+		if (currentPage > totalPagesAfterDelete) {
+			setCurrentPage(totalPagesAfterDelete);
+		}
+	};
+
 	if (isLoading) {
 		return <div>Loading deals...</div>;
 	}
@@ -85,11 +180,20 @@ export default function DealsPage() {
 
 	return (
 		<div className='space-y-6'>
-			<div>
-				<h2 className='text-2xl font-bold text-gray-900'>Deals</h2>
-				<p className='text-sm text-gray-500'>
-					Manage sales opportunities and track deal progress.
-				</p>
+			<div className='flex items-center justify-between'>
+				<div>
+					<h2 className='text-2xl font-bold text-gray-900'>Deals</h2>
+					<p className='text-sm text-gray-500'>
+						Manage sales opportunities and track deal progress.
+					</p>
+				</div>
+
+				<button
+					onClick={handleOpenCreateModal}
+					className='rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800'
+				>
+					Add Deal
+				</button>
 			</div>
 
 			<DealsFilters
@@ -110,13 +214,28 @@ export default function DealsPage() {
 				}}
 			/>
 
-			<DealsTable deals={paginatedDeals} />
+			<DealsTable
+				deals={paginatedDeals}
+				onEditDeal={handleOpenEditModal}
+				onDeleteDeal={handleDeleteDeal}
+			/>
 
 			<DealsPagination
 				currentPage={currentPage}
 				totalPages={totalPages}
 				onPageChange={setCurrentPage}
 			/>
+
+			{isModalOpen && (
+				<CreateDealModal
+					onClose={() => {
+						setIsModalOpen(false);
+						setEditingDeal(null);
+					}}
+					onSubmit={handleSubmitDeal}
+					initialData={editingDeal}
+				/>
+			)}
 		</div>
 	);
 }

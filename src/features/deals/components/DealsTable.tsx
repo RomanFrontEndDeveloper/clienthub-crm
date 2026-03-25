@@ -3,9 +3,15 @@ import { DealStatusBadge } from './DealStatusBadge';
 
 type DealsTableProps = {
 	deals: Deal[];
+	onEditDeal: (deal: Deal) => void;
+	onDeleteDeal: (dealId: string) => void;
 };
 
-export function DealsTable({ deals }: DealsTableProps) {
+export function DealsTable({
+	deals,
+	onEditDeal,
+	onDeleteDeal,
+}: DealsTableProps) {
 	return (
 		<div className='overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm'>
 			<div className='overflow-x-auto'>
@@ -20,6 +26,7 @@ export function DealsTable({ deals }: DealsTableProps) {
 							<th className='px-4 py-3 font-semibold'>
 								Created At
 							</th>
+							<th className='px-4 py-3 font-semibold'>Actions</th>
 						</tr>
 					</thead>
 
@@ -45,12 +52,33 @@ export function DealsTable({ deals }: DealsTableProps) {
 									<td className='px-4 py-3 text-gray-600'>
 										{deal.createdAt}
 									</td>
+									<td className='px-4 py-3'>
+										<div className='flex items-center gap-2'>
+											<button
+												type='button'
+												onClick={() => onEditDeal(deal)}
+												className='rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100'
+											>
+												Edit
+											</button>
+
+											<button
+												type='button'
+												onClick={() =>
+													onDeleteDeal(deal.id)
+												}
+												className='rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50'
+											>
+												Delete
+											</button>
+										</div>
+									</td>
 								</tr>
 							))
 						) : (
 							<tr>
 								<td
-									colSpan={6}
+									colSpan={7}
 									className='px-4 py-8 text-center text-sm text-gray-500'
 								>
 									No deals found.
