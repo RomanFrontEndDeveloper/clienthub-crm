@@ -14,8 +14,8 @@ export const taskSchema = z.object({
 	dueDate: z.string().min(1, 'Due date is required'),
 	assignedTo: z
 		.string()
-		.min(2, 'Assigned user is required')
-		.max(50, 'Assigned user is too long'),
+		.min(2, 'Assigned to is required')
+		.max(50, 'Assigned to is too long'),
 	relatedTo: z.string().optional(),
 });
 
